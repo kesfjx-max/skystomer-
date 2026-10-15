@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>스카이스토머 말씀 암송 마스터 RPG</title>
+<style>
+  :root {
+    --bg-dark: #101624;
+    --card-bg: #1c2638;
+    --gold: #f6c90e;
+    --red: #ff4757;
+    --green: #2ed573;
+    --blue: #3742fa;
+    --text: #f1f2f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg-dark); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 12px; }
+  #app { width: 100%; max-width: 620px; background: var(--card-bg); border-radius: 20px; box-shadow: 0 10px 35px rgba(0,0,0,0.6); overflow: hidden; border: 3px solid #2e3e5c; }
+  
+  .status-header { background: #151e2e; padding: 14px 18px; border-bottom: 2px solid #2e3e5c; }
+  .status-top { display: flex; justify-content: space-between; align-items: center; font-weight: bold; margin-bottom: 8px; }
+  .hp-track { background: #0b101b; border-radius: 10px; height: 18px; position: relative; overflow: hidden; border: 1px solid #4a5d82; }
+  .hp-fill { background: linear-gradient(90deg, #ff4757, #ff6b81); height: 100%; width: 100%; transition: width 0.3s; }
+  .hp-label { position: absolute; width: 100%; text-align: center; font-size: 11px; top: 1px; font-weight: bold; }
+  .retry-badge { background: #ff4757; color: white; padding: 3px 8px; border-radius: 8px; font-size: 12px; font-weight: bold; }
+
+  .content-body { padding: 20px; text-align: center; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .monster-icon { font-size: 65px; margin: 8px 0; animation: float 2.2s infinite ease-in-out; }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+  .monster-name { font-size: 18px; font-weight: 800; color: #ff6b81; }
+
+  .verse-box { background: #24324a; border-radius: 14px; padding: 16px; margin: 15px 0; text-align: left; border-left: 5px solid var(--gold); }
+  .verse-unit { font-size: 12px; color: var(--gold); font-weight: bold; margin-bottom: 4px; }
+  .verse-q { font-size: 16px; font-weight: bold; line-height: 1.45; }
+
+  .choice-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+  .choice-btn { background: #2a3b59; color: white; border: 2px solid #3c527c; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; transition: 0.1s; }
+  .choice-btn:active { background: #3c527c; transform: scale(0.98); }
+
+  /* 반복 암송 모달창 (천사의 거울) */
+  #mirror-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; padding: 20px; z-index: 999; }
+  .modal-card { background: #1a2538; border: 3px solid var(--gold); border-radius: 20px; max-width: 520px; width: 100%; padding: 22px; text-align: center; box-shadow: 0 0 30px rgba(246, 201, 14, 0.4); }
+  .modal-title { color: var(--gold); font-size: 20px; font-weight: bold; margin-bottom: 12px; }
+  .modal-ref { background: #263652; color: #7bed9f; display: inline-block; padding: 4px 12px; border-radius: 8px; font-weight: bold; font-size: 14px; margin-bottom: 12px; }
+  .modal-verse { font-size: 17px; font-weight: bold; line-height: 1.6; color: white; background: #0f1624; padding: 15px; border-radius: 12px; margin-bottom: 12px; text-align: left; border: 1px dashed var(--gold); }
+  .modal-meaning { font-size: 13px; color: #a4b0be; text-align: left; margin-bottom: 18px; line-height: 1.4; }
+  .modal-mission { background: rgba(255, 71, 87, 0.2); border: 1px solid var(--red); color: #ff6b81; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-bottom: 15px; }
+
+  .big-btn { width: 100%; background: var(--gold); color: #101624; border: none; border-radius: 14px; padding: 15px; font-size: 17px; font-weight: 800; cursor: pointer; margin-top: 10px; box-shadow: 0 5px 15px rgba(246, 201, 14, 0.3); }
+  .big-btn:active { transform: scale(0.98); }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- 1. 시작 화면 -->
+  <div id="start-screen" class="screen active content-body">
+    <div style="font-size: 60px; margin-bottom: 10px;">🛡️📖</div>
+    <h1 style="color: var(--gold); font-size: 24px; margin-bottom: 6px;">스카이스토머 말씀 암송 RPG</h1>
+    <p style="color: #a4b0be; font-size: 14px; margin-bottom: 25px;">틀린 말씀은 3번 외우고 100% 클리어하기!</p>
+
+    <div style="background: #151e2e; padding: 15px; border-radius: 14px; text-align: left; margin-bottom: 20px;">
+      <label style="font-size: 12px; color: #a4b0be; font-weight: bold;">용사 이름:</label>
+      <input type="text" id="hero-name" value="스카이스토머" style="width: 100%; padding: 12px; margin-top: 6px; border-radius: 10px; border: 2px solid #2e3e5c; background: #101624; color: white; font-size: 16px; outline: none;">
+    </div>
+    <button class="big-btn" onclick="startAdventure()">⚔️ 10단계 모험 시작하기!</button>
+  </div>
+
+  <!-- 2. 배틀 화면 -->
+  <div id="battle-screen" class="screen">
+    <div class="status-header">
+      <div class="status-top">
+        <span id="label-name" style="color: var(--gold);">🛡️ 용사 (Lv.1)</span>
+        <span id="label-stage" style="color: #7bed9f; font-size: 13px;">STAGE 1 / 10</span>
+      </div>
+      <div class="hp-track">
+        <div id="hp-bar" class="hp-fill"></div>
+        <div id="hp-text" class="hp-label">100 / 100 HP</div>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 13px;">
+        <span id="label-gems">보석: 0/10</span>
+        <span id="label-retry-deck" class="retry-badge">오답 복습: 0개</span>
+      </div>
+    </div>
+
+    <div class="content-body">
+      <div class="monster-name" id="m-name">👾 몬스터 이름</div>
+      <div class="monster-icon" id="m-icon">👾</div>
+
+      <div class="verse-box">
+        <div class="verse-unit" id="v-unit">승급과정</div>
+        <div class="verse-q" id="v-question">문제가 표시됩니다.</div>
+      </div>
+
+      <div class="choice-list" id="choices-box"></div>
+    </div>
+  </div>
+
+  <!-- 3. 엔딩 승리 화면 -->
+  <div id="victory-screen" class="screen content-body">
+    <div style="font-size: 60px; margin-bottom: 10px;">👑🏆</div>
+    <h2 style="color: var(--gold); font-size: 24px; margin-bottom: 10px;">100% 말씀 완전 정복 성공!</h2>
+    <p style="font-size: 14px; line-height: 1.6; color: #ced6e0; margin-bottom: 20px;">
+      모든 오답까지 3회 낭독과 복습 배틀을 통해 완벽하게 마음에 새겼습니다!<br>
+      성경퀴즈대회에서도 100점 만점을 받을 거예요! 🚀
+    </p>
+    <button class="big-btn" onclick="location.reload()">새로운 10문제 도전하기 🔄</button>
+  </div>
+</div>
+
+<!-- 천사의 말씀 거울 (틀렸을 때 3회 반복 암송 모달) -->
+<div id="mirror-modal">
+  <div class="modal-card">
+    <div class="modal-title">🔮 천사의 말씀 거울 🔮</div>
+    <div class="modal-ref" id="modal-ref">성경구절 출처</div>
+    <div class="modal-verse" id="modal-text">말씀 전문 내용</div>
+    <div class="modal-meaning" id="modal-meaning">말씀의 뜻</div>
+    <div class="modal-mission">
+      📢 <strong>[암송 미션]</strong><br>
+      이 말씀을 큰 소리로 <strong>3번 씩씩하게 외쳐보세요!</strong><br>
+      (3번 다 읽은 후 아래 버튼을 누르면 오답 가방에 저장됩니다)
+    </div>
+    <button class="big-btn" onclick="closeMirrorModal()">✨ 3번 다 외웠습니다! (재도전 덱 저장)</button>
+  </div>
+</div>
+
+<script>
+// 32개 스카이스토머 전체 암송 성구 데이터베이스
+const allVerses = [
+  { unit: "승급과정 (S-구주)", ref: "요한1서 4장 14절", text: "아버지가 아들을 세상의 구주로 보내신 것을 우리가 보았고 또 증언하노니", mean: "구주: 죄와 사망에서 우리를 구원하실 분", q: "불티단 SPARKS 중 'S(Savior-구주)'에 해당하는 성경구절은?", c: ["요한1서 4장 14절", "시편 147편 5절", "사도행전 16장 31절"], a: 0 },
+  { unit: "승급과정 (P-능력)", ref: "시편 147편 5절", text: "우리 주는 위대하시며 능력이 많으시며 그의 지혜가 무궁하시도다", mean: "능력(Power): 모든 것을 행하실 수 있는 하나님의 힘", q: "불티단 SPARKS 중 'P(Power-능력)' 말씀은?", c: ["시편 147편 5절", "로마서 1장 16절", "고린도전서 15장 3절"], a: 0 },
+  { unit: "승급과정 (A-성경대로)", ref: "고린도전서 15장 3절", text: "...성경대로 그리스도께서 우리 죄를 위하여 죽으시고", mean: "성경대로: 구약의 약속대로", q: "불티단 SPARKS 중 'A(성경대로)'에 해당하는 말씀은?", c: ["고린도전서 15장 3절", "고린도전서 15장 4절", "야고보서 2장 10절"], a: 0 },
+  { unit: "승급과정 (R-부활)", ref: "고린도전서 15장 4절", text: "장사 지낸 바 되셨다가 성경대로 사흘 만에 다시 살아나사", mean: "부활(Rose again): 죽음을 이기고 다시 살아나심", q: "'장사 지낸 바 되셨다가 성경대로 사흘 만에 다시 살아나사' 출처는?", c: ["고린도전서 15장 4절", "마태복음 28장 6절", "로마서 5장 8절"], a: 0 },
+  { unit: "승급과정 (K-지키다)", ref: "야고보서 2장 10절", text: "누구든지 온 율법을 지키다가 그 하나를 범하면 모두 범한 자가 되나니", mean: "율법: 하나님 계명의 규칙 / 범하다: 불순종하다", q: "불티단 SPARKS 중 'K(Keep-지키다)'에 해당하는 구절은?", c: ["야고보서 2장 10절", "골로새서 4장 2절", "요한1서 3장 18절"], a: 0 },
+  { unit: "승급과정 (S-구원받다)", ref: "사도행전 16장 31절", text: "주 예수를 믿으라 그리하면 너와 네 집이 구원을 받으리라", mean: "구원받다(Saved): 죄에 대한 벌을 받지 않고 용서받다", q: "바울이 간수에게 선포한 구원의 말씀 사도행전 16장 31절은?", c: ["주 예수를 믿으라 그리하면 너와 네 집이 구원을 받으리라", "하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니", "모든 사람이 죄를 범하였으매 하나님의 영광에 이르지 못하더니"], a: 0 },
+  { unit: "승급과정 (주제성구 1)", ref: "요한복음 3장 16절", text: "하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라", mean: "독생자: 하나밖에 없는 아들 / 멸망: 하나님과 영원히 분리됨", q: "요한복음 3장 16절에서 '하나님으로부터 영원히 분리됨'을 뜻하는 단어는?", c: ["멸망", "사망", "심판"], a: 0 },
+  { unit: "승급과정 (주제성구 2)", ref: "신명기 31장 8절", text: "여호와 그가 네 앞에서 가시며 너와 함께 하사 너를 떠나지 아니하시며 버리지 아니하시리니 너는 두려워하지 말라 놀라지 말라", mean: "하나님이 함께하시므로 두려워하거나 놀라지 말라", q: "신명기 31장 8절의 마지막 당부 말씀은?", c: ["너는 두려워하지 말라 놀라지 말라", "오직 강하고 담대하라", "근심하지 말라"], a: 0 },
+  { unit: "빨강보석 1", ref: "누가복음 2장 10-11절", text: "천사가 이르되 무서워하지 말라 보라 내가 온 백성에게 미칠 큰 기쁨의 좋은 소식을 너희에게 전하노라 오늘 다윗의 동네에 너희를 위하여 구주가 나셨으니 곧 그리스도 주시니라", mean: "크리스마스의 참뜻: 예수님이 구주로 오신 기쁜 소식", q: "누가복음 2:10 빈칸: '내가 (   )에게 미칠 큰 기쁨의 (   )을 전하노라'", c: ["온 백성 / 좋은 소식", "모든 사람 / 복된 소식", "온 세상 / 구원의 소식"], a: 0 },
+  { unit: "빨강보석 1", ref: "요한복음 1장 1-3절", text: "태초에 말씀이 계시니라 이 말씀이 하나님과 함께 계셨으니 이 말씀은 곧 하나님이시니라 그가 태초에 하나님과 함께 계셨고 만물이 그로 말미암아 지은 바 되었으니 지은 것이 하나도 그가 없이는 된 것이 없느니라", mean: "말씀: 세상을 창조하신 예수 그리스도", q: "요한복음 1:1 '태초에 하나님과 함께 계셨던 말씀'은 누구일까요?", c: ["예수 그리스도", "사도 요한", "모세"], a: 0 },
+  { unit: "빨강보석 1", ref: "이사야 9장 6절", text: "이는 한 아기가 우리에게 났고 한 아들을 우리에게 주신 바 되었는데 그의 어깨에는 정사를 메었고 그의 이름은 기묘자라, 모사라, 전능하신 하나님이라, 영존하시는 아버지라, 평강의 왕이라 할 것임이라", mean: "모사: 올바르고 참된 말을 해 주시는 분 / 기묘자: 놀라운 기적을 행하는 분", q: "이사야 9장 6절에서 '올바르고 참된 말을 해 주시는 분'을 뜻하는 호칭은?", c: ["모사", "기묘자", "영존하시는 아버지"], a: 0 },
+  { unit: "초록보석 1", ref: "시편 100편 4절", text: "감사함으로 그의 문에 들어가며 찬송함으로 그의 궁정에 들어가서 그에게 감사하며 그의 이름을 송축할지어다", mean: "나병환자처럼 감사와 찬송으로 주님께 나아감", q: "시편 100편 4절 빈칸: '찬송함으로 그의 (   )에 들어가서'", c: ["궁정", "성전", "보좌"], a: 0 },
+  { unit: "초록보석 1", ref: "마태복음 19장 14절", text: "예수께서 이르시되 어린 아이들을 용납하고 내게 오는 것을 금하지 말라 천국이 이런 사람의 것이니라 하시고", mean: "어린이는 소중하며 어린아이처럼 믿는 자의 천국", q: "마태복음 19:14 '어린 아이들이 ( 이것 )을 금하지 말라'에서 이것은?", c: ["내게 오는 것", "찬양하는 것", "기도하는 것"], a: 0 },
+  { unit: "초록보석 1", ref: "누가복음 19장 10절", text: "인자가 온 것은 잃어버린 자를 찾아 구원하려 함이니라", mean: "인자: 예수 그리스도 / 잃어버린 자: 구원받아야 할 죄인", q: "누가복음 19:10 '인자'가 뜻하는 분은 누구일까요?", c: ["예수 그리스도", "다윗 왕", "선지자 엘리야"], a: 0 },
+  { unit: "빨강보석 2", ref: "요한1서 4장 15절", text: "누구든지 예수를 하나님의 아들이라 시인하면 하나님이 그의 안에 거하시고 그도 하나님 안에 거하느니라", mean: "백부장의 신앙고백: 예수님은 하나님의 아들이십니다.", q: "'누구든지 예수를 하나님의 아들이라 시인하면...' 말씀의 출처는?", c: ["요한1서 4장 15절", "로마서 10장 9절", "마태복음 16장 16절"], a: 0 },
+  { unit: "빨강보석 2", ref: "로마서 5장 8절", text: "우리가 아직 죄인 되었을 때에 그리스도께서 우리를 위하여 죽으심으로 하나님께서 우리에 대한 자기의 사랑을 확증하셨느니라", mean: "확증하다: 십자가 죽으심으로 사랑을 확실히 증명하다", q: "로마서 5장 8절에서 '보여주다, 확실히 증명하다'를 뜻하는 단어는?", c: ["확증하셨느니라", "선포하셨느니라", "나타내셨느니라"], a: 0 },
+  { unit: "빨강보석 2", ref: "마태복음 28장 6절", text: "그가 여기 계시지 않고 그가 말씀 하시던 대로 살아나셨느니라 와서 그가 누우셨던 곳을 보라", mean: "부활의 빈 무덤에서 천사가 전한 기쁜 소식", q: "'그가 여기 계시지 않고 그가 말씀 하시던 대로 살아나셨느니라' 출처는?", c: ["마태복음 28장 6절", "마가복음 16장 6절", "누가복음 24장 6절"], a: 0 },
+  { unit: "빨강보석 2", ref: "요한1서 5장 12절", text: "아들이 있는 자에게는 생명이 있고 하나님의 아들이 없는 자에게는 생명이 없느니라", mean: "예수님이 마음에 계신 자에게만 참 생명이 있습니다.", q: "요한1서 5장 12절 말씀의 바른 내용은?", c: ["아들이 있는 자에게는 생명이 있고 하나님의 아들이 없는 자에게는 생명이 없느니라", "구원을 믿는 자에게는 축복이 있고 믿지 않는 자에게는 축복이 없느니라", "기도하는 자에게는 응답이 있고 기도하지 않는 자에게는 응답이 없느니라"], a: 0 },
+  { unit: "초록보석 2", ref: "로마서 1장 16절", text: "내가 복음을 부끄러워하지 아니하노니 이 복음은 모든 믿는 자에게 구원을 주시는 하나님의 능력이 됨이라...", mean: "복음은 죄에서 건져내는 하나님의 위대한 능력", q: "로마서 1:16 빈칸: '이 복음은 모든 믿는 자에게 (   )을 주시는 하나님의 (   )이 됨이라'", c: ["구원 / 능력", "영생 / 지혜", "은혜 / 축복"], a: 0 },
+  { unit: "초록보석 2", ref: "사도행전 1장 8절", text: "오직 성령이 너희에게 임하시면 너희가 권능을 받고 예루살렘과 온 유대와 사마리아와 땅 끝까지 이르러 내 증인이 되리라 하시니라", mean: "성령: 하나님의 영 / 증인: 복음을 전하는 사람들", q: "사도행전 1장 8절에서 '예수님의 복음을 세상에 전하는 사람'을 뜻하는 말은?", c: ["증인", "제자", "선지자"], a: 0 },
+  { unit: "빨강보석 3", ref: "요한1서 3장 17-18절", text: "누가 이 세상의 재물을 가지고 형제의 궁핍함을 보고도 도와 줄 마음을 닫으면 하나님의 사랑이 어찌 그 속에 거하겠느냐 자녀들아 우리가 말과 혀로만 사랑하지 말고 행함과 진실함으로 하자", mean: "다비다처럼 말과 혀로만이 아닌 행함과 진실함으로 사랑함", q: "요한1서 3:18: '우리가 말과 혀로만 사랑하지 말고 (   )과 (   )으로 하자'", c: ["행함 / 진실함", "믿음 / 소망", "기도 / 감사"], a: 0 },
+  { unit: "빨강보석 3", ref: "골로새서 4장 2절", text: "기도를 계속하고 기도에 감사함으로 깨어 있으라", mean: "깨어 있으라: 기도할 때 하나님의 응답에 주의를 기울이라", q: "골로새서 4장 2절에서 '깨어 있으라'의 바른 뜻은?", c: ["기도할 때 하나님의 응답에 주의를 기울이라", "밤에 잠을 자지 말고 보초를 서라", "눈을 크게 뜨고 기도하라"], a: 0 },
+  { unit: "초록보석 3", ref: "빌립보서 4장 4절", text: "주 안에서 항상 기뻐하라 내가 다시 말하노니 기뻐하라", mean: "바울이 감옥에서도 누린 참된 기쁨", q: "빌립보서 4장 4절에서 2번 반복되는 핵심 단어는?", c: ["기뻐하라", "기도하라", "감사하라"], a: 0 },
+  { unit: "초록보석 3", ref: "고린도후서 12장 9절", text: "(하나님이) 나에게 이르시기를 내 은혜가 네게 족하도다 이는 내 능력이 약한 데서 온전하여 짐이라 하신지라 그러므로 도리어 크게 기뻐함으로 나의 여러 약한 것들에 대하여 자랑하리니 이는 그리스도의 능력이 내게 머물게 하려 함이라", mean: "은혜: 자격 없는 자에게 주시는 사랑 / 족하다: 충분하다", q: "고린도후서 12:9 '자격이 없는데도 돌보아주시는 하나님의 사랑'을 뜻하는 말은?", c: ["은혜", "능력", "평강"], a: 0 },
+  { unit: "초록보석 3", ref: "디모데후서 3장 15절", text: "어려서부터 성경을 알았나니 성경은 능히 너로 하여금 그리스도 예수 안에 있는 믿음으로 말미암아 구원에 이르는 지혜가 있게 하느니라", mean: "어려서 배운 말씀이 구원에 이르는 지혜를 줌", q: "디모데후서 3:15: '성경은 능히 너로 하여금... (   )에 이르는 지혜가 있게 하느니라'", c: ["구원", "영생", "축복"], a: 0 },
+  { unit: "빨강보석 4", ref: "데살로니가전서 4장 16절", text: "주께서 호령과 천사장의 소리와 하나님의 나팔 소리로 친히 하늘로부터 강림하시리니 그리스도 안에서 죽은 자들이 먼저 일어나고", mean: "천사장: 천사들의 대장", q: "데살로니가전서 4:16에서 '천사들의 대장'을 뜻하는 단어는?", c: ["천사장", "군대장관", "미가엘"], a: 0 },
+  { unit: "빨강보석 4", ref: "데살로니가전서 4장 17절", text: "그 후에 우리 살아남은 자들도 그들과 함께 구름 속으로 끌어올려 공중에서 주를 영접하게 하시리니 그리하여 우리가 항상 주와 함께 있으리라", mean: "공중에서 주님을 만나 영원히 함께함", q: "'공중에서 주를 영접하게 하시리니'가 들어있는 말씀의 출처는?", c: ["데살로니가전서 4장 17절", "데살로니가전서 5장 17절", "고린도전서 15장 51절"], a: 0 },
+  { unit: "빨강보석 4", ref: "요한계시록 21장 1절 & 3-4절", text: "내가 새 하늘과 새 땅을 보니... 하나님은 친히 그들과 함께 계셔서 모든 눈물을 그 눈에서 닦아 주시니 다시는 사망이 없고 애통하는 것이나 곡하는 것이나 아픈 것이 다시 있지 아니하리니 처음 것들이 다 지나갔음이러라", mean: "새 하늘과 새 땅: 눈물, 죽음, 슬픔이 없는 하나님 나라", q: "요한계시록 21:4 새 하늘과 새 땅에 '다시는 있지 아니할 것'이 아닌 것은?", c: ["찬양과 예배", "사망과 슬픔", "곡하는 것과 아픈 것"], a: 0 },
+  { unit: "빨강보석 4", ref: "요한복음 14장 1-2절", text: "너희는 마음에 근심하지 말라 하나님을 믿으니 또 나를 믿으라 내 아버지 집에 거할 곳이 많도다 그렇지 않으면 너희에게 일렀으리라 내가 너희를 위하여 거처를 예비하러 가노니", mean: "거처: 살 집 (하늘나라 천국 처소)", q: "요한복음 14:1-2에서 예수님이 우리를 위해 예비하러 가신 '거처'의 의미는?", c: ["살 집 (하늘나라 처소)", "지상 궁궐", "성전 뜰"], a: 0 },
+  { unit: "초록보석 4", ref: "잠언 17장 17절", text: "친구는 사랑이 끊어지지 아니하고 위급한 때를 위하여 났느니라", mean: "좋은 친구는 사랑이 끊어지지 않고 어려울 때 돕습니다.", q: "'친구는 사랑이 끊어지지 아니하고...' 말씀의 출처는?", c: ["잠언 17장 17절", "시편 23편 1절", "전도서 4장 9절"], a: 0 },
+  { unit: "초록보석 4", ref: "로마서 3장 23절", text: "모든 사람이 죄를 범하였으매 하나님의 영광에 이르지 못하더니", mean: "모든 사람이 죄인이며 하나님의 영광에 이르지 못함", q: "'모든 사람이 죄를 범하였으매 하나님의 영광에 이르지 못하더니' 출처는?", c: ["로마서 3장 23절", "로마서 6장 23절", "야고보서 2장 10절"], a: 0 },
+  { unit: "초록보석 4", ref: "로마서 6장 23절", text: "죄의 삯은 사망이요 하나님의 은사는 그리스도 예수 우리 주 안에 있는 영생이니라", mean: "삯: 일한 대가 / 은사: 하나님의 선물인 영생", q: "로마서 6장 23절: '죄의 (   )은 사망이요'의 올바른 맞춤법은?", c: ["삯", "삵", "값"], a: 0 }
+];
+
+const monsters = [
+  { name: "깜빡이 도깨비", icon: "👺" }, { name: "책장 뒤죽박죽 골렘", icon: "🗿" },
+  { name: "베들레헴 모래전갈", icon: "🦂" }, { name: "투덜이 늪지괴물", icon: "🐸" },
+  { name: "골고다 어둠의 기사", icon: "🤺" }, { name: "광야의 모래폭풍 마왕", icon: "🌪️" },
+  { name: "쇠사슬 감옥 간수장", icon: "⛓️" }, { name: "성난 파도 유라굴로", icon: "🌊" },
+  { name: "영원한 밤의 드래곤", icon: "🐉" }, { name: "오답의 군주 '틀림마왕'", icon: "😈" }
+];
+
+let hero = { name: "스카이스토머", hp: 100, maxHp: 100, level: 1, gems: 0 };
+let mainStages = [];
+let retryQueue = []; // 오답 반복 암송 큐
+let currentQuestion = null;
+let currentStageIndex = 0;
+let isRetryMode = false;
+
+function startAdventure() {
+  hero.name = document.getElementById('hero-name').value.trim() || "스카이스토머";
+  hero.hp = 100; hero.level = 1; hero.gems = 0;
+  retryQueue = [];
+  currentStageIndex = 0;
+  isRetryMode = false;
+
+  // 전체 32개 말씀 중 10개를 이번 판 10단계로 무작위 추출
+  let shuffled = [...allVerses].sort(() => Math.random() - 0.5);
+  mainStages = shuffled.slice(0, 10);
+
+  document.getElementById('start-screen').classList.remove('active');
+  document.getElementById('battle-screen').classList.add('active');
+  nextQuestion();
+}
+
+function nextQuestion() {
+  if (!isRetryMode) {
+    if (currentStageIndex < 10) {
+      currentQuestion = mainStages[currentStageIndex];
+      renderBattle(false);
+    } else {
+      // 10단계 종료 후 오답 복습 덱 체크
+      if (retryQueue.length > 0) {
+        isRetryMode = true;
+        alert(`🚨 [오답 복습 보스전 발동!]\n용사님! 틀렸던 ${retryQueue.length}개의 말씀을 100% 맞춰야 최종 클리어됩니다!`);
+        nextRetryQuestion();
+      } else {
+        showVictory();
+      }
+    }
+  } else {
+    nextRetryQuestion();
+  }
+}
+
+function nextRetryQuestion() {
+  if (retryQueue.length > 0) {
+    currentQuestion = retryQueue.shift();
+    renderBattle(true);
+  } else {
+    showVictory();
+  }
+}
+
+function renderBattle(isRetry) {
+  document.getElementById('label-name').innerText = `🛡️ ${hero.name} (Lv.${hero.level})`;
+  document.getElementById('label-stage').innerText = isRetry ? `🔥 오답 복습 덱 (${retryQueue.length + 1}개 남음)` : `STAGE ${currentStageIndex + 1} / 10`;
+  document.getElementById('label-gems').innerText = `보석: ${hero.gems}/10`;
+  document.getElementById('label-retry-deck').innerText = `오답 복습: ${retryQueue.length}개`;
+  updateHp();
+
+  const m = monsters[currentStageIndex % monsters.length];
+  document.getElementById('m-name').innerText = isRetry ? `👿 부활한 오답 몬스터` : m.name;
+  document.getElementById('m-icon').innerText = isRetry ? `🔥` : m.icon;
+
+  document.getElementById('v-unit').innerText = `${currentQuestion.unit} 【 ${currentQuestion.ref} 】`;
+  document.getElementById('v-question').innerText = currentQuestion.q;
+
+  const box = document.getElementById('choices-box');
+  box.innerHTML = '';
+
+  let choicesWithMeta = currentQuestion.c.map((text, idx) => ({ text, isAns: idx === currentQuestion.a }));
+  choicesWithMeta.sort(() => Math.random() - 0.5);
+
+  choicesWithMeta.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerText = item.text;
+    btn.onclick = () => handleAnswer(item.isAns);
+    box.appendChild(btn);
+  });
+}
+
+function handleAnswer(isCorrect) {
+  if (isCorrect) {
+    alert("⚔️ ⚡ [말씀의 일격!] 정답입니다! 몬스터를 격파했습니다!");
+    hero.level++;
+    if (!isRetryMode) {
+      hero.gems++;
+      currentStageIndex++;
+    }
+    nextQuestion();
+  } else {
+    hero.hp = Math.max(0, hero.hp - 20);
+    updateHp();
+    if (hero.hp <= 0) {
+      alert("🕊️ \"두려워하지 말라 놀라지 말라!\" (신명기 31:8)\n천사의 기도로 부활하여 HP가 회복됩니다!");
+      hero.hp = 60;
+      updateHp();
+    }
+    // 오답 큐에 저장 (중복 방지)
+    if (!retryQueue.includes(currentQuestion)) {
+      retryQueue.push(currentQuestion);
+    }
+    // 천사의 말씀 거울 팝업 띄우기
+    openMirrorModal(currentQuestion);
+  }
+}
+
+function openMirrorModal(item) {
+  document.getElementById('modal-ref').innerText = item.ref;
+  document.getElementById('modal-text').innerText = item.text;
+  document.getElementById('modal-meaning').innerText = `💡 [말씀의 지혜]: ${item.mean}`;
+  document.getElementById('mirror-modal').style.display = 'flex';
+}
+
+function closeMirrorModal() {
+  document.getElementById('mirror-modal').style.display = 'none';
+  if (isRetryMode) {
+    // 오답 모드에서 또 틀렸으면 덱 맨 뒤로 다시 보냄
+    nextQuestion();
+  } else {
+    currentStageIndex++;
+    nextQuestion();
+  }
+}
+
+function updateHp() {
+  document.getElementById('hp-bar').style.width = `${hero.hp}%`;
+  document.getElementById('hp-text').innerText = `${hero.hp} / 100 HP`;
+}
+
+function showVictory() {
+  document.getElementById('battle-screen').classList.remove('active');
+  document.getElementById('victory-screen').classList.add('active');
+}
+</script>
+</body>
+</html>
